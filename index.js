@@ -14,6 +14,14 @@ app.use("/admin", admin)
 const customer = require('./routes/customer');
 app.use("/customer", customer)
 
+// endpoint product
+const product = require('./routes/product');
+app.use("/product", product)
+
+// endpoint transaksi
+const transaksi = require('./routes/transaksi');
+app.use("/transaksi", transaksi)
+
 //run server
 app.listen(8080, () => {
     console.log('Server run on port 8080')

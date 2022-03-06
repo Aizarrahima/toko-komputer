@@ -3,9 +3,6 @@ const express = require("express")
 const app = express()
 app.use(express.json())
 
-// import md5
-const md5 = require("md5")
-
 // import multer
 const multer = require("multer")
 const path = require("path")
@@ -13,51 +10,44 @@ const fs = require("fs")
 
 // import model
 const models = require("../models/index")
-const customer = models.customer
-
-// import auth
-const auth = require("../auth")
-const jwt = require("jsonwebtoken")
-const SECRET_KEY = "BelajarNodeJSItuMenyenangkan"
+const product = models.product
 
 // config storage image
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, "./image/customer")
+        cb(null, "./image/product")
     },
     filename: (req, file, cb) => {
         cb(null, "img-" + Date.now() + path.extname(file.originalname))
     }
 })
-let upload = multer({
-    storage: storage
-})
+let upload = multer({ storage: storage })
 
-//menampilkan semua data customer
+// menampilkan semua data product
 app.get("/", (req, res) => {
-    customer.findAll()
+    product.findAll()
         .then(result => {
             res.json({
-                customer: result
-            })
+            product: result
         })
-        .catch(error => {
-            res.json({
-                message: error.message
-            })
-        })
+    })
+    .catch(error => {
+        res.json({
+            message: error.message
+        })    
+    })
 })
 
-//menampilkan data customer berdasarkan id
-app.get("/:customer_id", (req, res) => {
-    customer.findOne({
+//menampilkan data product berdasarkan id
+app.get("/:product_id", (req, res) => {
+    product.findOne({
         where: {
-            customer_id: req.params.customer_id
+            product_id: req.params.product_id
         }
     })
     .then(result => {
         res.json({
-            customer: result
+            product: result
         })
     })
     .catch(error => {
@@ -67,7 +57,7 @@ app.get("/:customer_id", (req, res) => {
     })
 })
 
-//menambahkan data customer baru
+//menambahkan data product baru
 app.post("/", upload.single("image"), (req, res) => {
     if (!req.file) {
         res.json({
@@ -76,16 +66,15 @@ app.post("/", upload.single("image"), (req, res) => {
     } else {
         let data = {
             name: req.body.name,
-            phone: req.body.phone,
-            address: req.body.address,
-            image: req.file.filename,
-            username: req.body.username,
-            password: md5(req.body.password)
+            price: req.body.price,
+            stock: req.body.stock,
+            image: req.file.filename
         }
-        customer.create(data)
+        product.create(data)
             .then(result => {
                 res.json({
-                    message: "data has been inserted"
+                    message: "data has been inserted",
+                    product: result
                 })
             })
             .catch(error => {
@@ -96,27 +85,27 @@ app.post("/", upload.single("image"), (req, res) => {
     }
 })
 
-//mengubah data customer berdasarkan id
+// mengubah data product
 app.put("/:id", upload.single("image"), (req, res) => {
     let param = {
-        customer_id: req.params.id
+        product_id: req.params.id
     }
     let data = {
         name: req.body.name,
-        phone: req.body.phone,
-        address: req.body.address,
-        username: req.body.username
+        price: req.body.price,
+        stock: req.body.stock,
+        image: req.file.filename
     }
     if (req.file) {
         // get data by id
-        const row = customer.findOne({
+        const row = product.findOne({
                 where: param
             })
             .then(result => {
                 let oldFileName = result.image
 
                 // delete old file
-                let dir = path.join(__dirname, "../image/customer", oldFileName)
+                let dir = path.join(__dirname, "../image/product", oldFileName)
                 fs.unlink(dir, err => console.log(err))
             })
             .catch(error => {
@@ -127,11 +116,7 @@ app.put("/:id", upload.single("image"), (req, res) => {
         data.image = req.file.filename
     }
 
-    if (req.body.password) {
-        data.password = md5(req.body.password)
-    }
-
-    customer.update(data, {
+    product.update(data, {
             where: param
         })
         .then(result => {
@@ -146,23 +131,23 @@ app.put("/:id", upload.single("image"), (req, res) => {
         })
 })
 
-//menghapus data customer berdasarkan id
+// menghapus data product berdasarkan id
 app.delete("/:id", async (req, res) => {
     try {
         let param = {
-            customer_id: req.params.id
+            product_id: req.params.id
         }
-        let result = await customer.findOne({
+        let result = await product.findOne({
             where: param
         })
         let oldFileName = result.image
 
         // delete old file
-        let dir = path.join(__dirname, "../image/customer", oldFileName)
+        let dir = path.join(__dirname, "../image/product", oldFileName)
         fs.unlink(dir, err => console.log(err))
 
         // delete data
-        customer.destroy({
+        product.destroy({
                 where: param
             })
             .then(result => {
@@ -179,31 +164,6 @@ app.delete("/:id", async (req, res) => {
     } catch (error) {
         res.json({
             message: error.message
-        })
-    }
-})
-
-// endpoint login
-app.post("/auth", async (req, res) => {
-    let data = {
-        username: req.body.username,
-        password: md5(req.body.password)
-    }
-
-    let result = await customer.findOne({ where: data })
-    if (result) {
-        let payload = JSON.stringify(result)
-        // generate token
-        let token = jwt.sign(payload, SECRET_KEY)
-        res.json({
-            logged: true,
-            data: result,
-            token: token
-        })
-    } else {
-        res.json({
-            logged: false,
-            message: "Invalid username or password"
         })
     }
 })
